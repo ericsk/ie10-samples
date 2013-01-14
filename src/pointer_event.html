@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>Internet Explorer 10: Pointer Events Sample</title>
+    <meta name="viewport" content="width=device-width">
+    <link rel="stylesheet" href="common.css">
+  </head>
+  <body>
+    <div class="container">
+      <h1>Internet Explorer 10: MSPointer Event Sample</h1>
+
+      <hr>
+
+      <div id="content">
+        <div id="demozone">
+          <h2>Demo</h2>
+          <p>Try your 'pointer' (mouse, pen, touch) on the following area.</p>
+          <canvas id="drawSurface" width="640" height="360"></canvas>
+        </div>
+
+        <div id="console">
+          <h2>Console</h2>
+          <ul>
+            <li>Touchable: <span id="touchable" class="value"></span></li>
+            <li>Touch points: <span id="touchpoints" class="value"></span></li>
+            <li>Pointer event: <span id="pointerevent" class="value"></span></li>
+            <li>Pointer Type: <span id="pointertype" class="value"></span></li>
+            <li>Tilt (if a pen is used): <span id="tilt" class="value"></span></li>
+          </ul>
+        </div>
+      </div>
+
+      <hr>
+
+      <div id="references">
+        <h2>References</h2>
+        <ul>
+          <li><a href="http://www.w3.org/Submission/pointer-events/" target="_blank">Pointer Events Specification (W3C Member Submission)</a></li>
+          <li><a href="http://msdn.microsoft.com/library/hh673557.aspx" target="_blank">Pointer and gesture events (MSDN)</a></li>
+          <li><a href="http://blogs.msdn.com/b/ie/archive/2011/09/20/touch-input-for-ie10-and-metro-style-apps.aspx" target="_blank">Touch Input for IE10 and Metro style Apps (IEBlog)</a></li>
+          <li><a href="http://blogs.msdn.com/b/ie/archive/2011/10/19/handling-multi-touch-and-mouse-input-in-all-browsers.aspx">Handling Multi-touch and Mouse Input in All Browsers (IEBlog)</a></li>
+        </ul>
+      </div>
+
+      <script>
+        "use strict";
+
+        (function(window, undefined){
+          var drawingElement;   // the canvas DOM object.
+          var drawingContext;   // the 2D drawing context of the demo canvas.
+          var isTouchable;      // represents if the hardware supports touch screen
+          var isDrawing = false;    // represents if the user is drawing.
+
+          var prevX, prevY;
+
+          function init() {
+            /// <summary>
+            /// Initialize everything, the entry point of this sample.
+            /// </summary>
+
+            // check navigator.msMaxTouchPoints to determine if the hardware supports touch screen.
+            isTouchable = navigator.msMaxTouchPoints && navigator.msMaxTouchPoints > 1;
+            // feture dection: log in console.
+            document.getElementById('touchable').innerText = isTouchable ? "Yes" : "No";
+            document.getElementById('touchpoints').innerText = 
+              navigator.msMaxTouchPoints ? navigator.msMaxTouchPoints : "None";
+
+            // initialize the painting environment
+            initDraw();
+            // initialize the pointer event handling
+            initPointerEventsHandles();
+          }
+
+          function initDraw() {
+            /// <summary>
+            /// Setup the canvas DOM element and the drawing context.
+            /// Then, fill the canvas with a gray background.
+            /// </summary>
+
+            // init the drawface
+            drawingElement = document.getElementById('drawSurface');
+            drawingContext = drawingElement.getContext('2d');
+
+            // fill the background
+            drawingContext.fillStyle = '#ededed';
+            drawingContext.fillRect(0, 0, drawingElement.width, drawingElement.height);
+          }
+
+          function initPointerEventsHandles() {
+            /// <summary>
+            /// If the hardware supports touch screen, listen to 'MSPointerXXX' event. 
+            /// Otherwise, use mouse events.
+            /// </summary>
+
+            var events = ['mousedown', 'mousemove', 'mouseup', 'mouseout', 'mouseover'];
+            var handles = [handlePointerDown, handlePointerMove, handlePointerUp, handlePointerOut, handlePointerOver];
+
+            // navigator.msPointerEnabled indicates if the system fires MSPointerXXX events.
+            // It DOES NOT means you can use this variable to check if the screen touchable
+            if (navigator.msPointerEnabled) {
+              events = ['MSPointerDown', 'MSPointerMove', 'MSPointerUp', 'MSPointerOut', 'MSPointerOver']; 
+            }
+
+            // register the down, move, and up event handlers respectively.
+            var i, len = events.length;
+            for (i = 0; i < len; ++i) {
+              drawingElement.addEventListener(events[i], handles[i], false);
+            }
+
+          }
+
+          function handlePointerDown(evt) {
+            /// <summary>
+            /// The callback function for MSPointerDown/mousedown event.
+            /// In this function, turn the isDrawing flag on and set the coordinate of start point
+            /// </summary>
+            /// <param name="evt" type="Object">
+            /// The event object of MSPointerDown/mousedown event.
+            /// </param>
+
+            isDrawing = true;
+
+            // check the pointer type
+            var pointerType = 'Mouse'; // the default pointer type
+            if (isTouchable) {
+              // detect 
+              switch (evt.pointerType) {
+                case evt.MSPOINTER_TYPE_PEN:
+                  pointerType = 'Pen';
+                  break;
+                case evt.MSPOINTER_TYPE_TOUCH:
+                  pointerType = 'Touch';
+                  break;
+              }
+            }
+            document.getElementById('pointertype').innerText = pointerType;
+
+            // keep track of the start point.
+            prevX = evt.offsetX;
+            prevY = evt.offsetY;
+
+            // set the red pen to draw
+            drawingContext.strokeStyle = '#ff0000';
+            
+            document.getElementById('pointerevent').innerText = navigator.msPointerEnabled ? 'MSPointerDown' : 'mousedown';
+          }
+
+          function handlePointerMove(evt) {
+            /// <summary>
+            /// If the user starts to draw something, call the lineTo method to draw the lines.
+            /// </summary>
+            /// <param name="evt" type="Object">
+            /// The event object of MSPointerMove/mousemove event.
+            /// </param>
+
+            if (isDrawing) {
+              // draw the line from the previous coordinate to the current point.
+              drawingContext.beginPath();
+              drawingContext.moveTo(prevX, prevY);
+              drawingContext.lineTo(evt.offsetX, evt.offsetY);
+              drawingContext.stroke();
+
+              // replace the previous coordinate with new point.
+              prevX = evt.offsetX;
+              prevY = evt.offsetY;
+
+              // if the pointer is pen, log the tilt angle
+              if (evt.pointerType === evt.MSPOINTER_TYPE_PEN) {
+                document.getElementById('tilt').innerText = ['(', evt.tiltX, ', ', evt.tiltY, ')'].join('');
+              }
+            }
+            document.getElementById('pointerevent').innerText = navigator.msPointerEnabled ? 'MSPointerMove' : 'mousemove';
+          }
+
+          function handlePointerUp(evt) {
+            /// <summary>
+            /// Release the isDrawing flag.
+            /// </summary>
+            /// <param name="evt" type="Object">
+            /// The event object of MSPointerUp/mouseup event.
+            /// </param>
+            isDrawing = false;
+
+            document.getElementById('pointertype').innerText = '';
+            document.getElementById('pointerevent').innerText = navigator.msPointerEnabled ? 'MSPointerUp' : 'mouseup';
+          }
+
+          function handlePointerOut(evt) {
+            /// <summary>
+            /// invoked while the pointer out of element
+            /// </summary>
+            /// <param name="evt" type="Object">
+            /// the event object of the MSPointerOut/mouseout event.
+            /// </param>
+
+            document.getElementById('pointerevent').innerText = navigator.msPointerEnabled ? 'MSPointerOut' : 'mouseout';
+          }
+
+          function handlePointerOver(evt) {
+            /// <summary>
+            /// invoked while the pointer over the element
+            /// </summary>
+            /// <param name="evt" type="Object">
+            /// the event object of the MSPointerOver/mouseover event.
+            /// </param>
+            document.getElementById('pointerevent').innerText = navigator.msPointerEnabled ? 'MSPointerOver' : 'mouseover';
+          }
+
+          // enter the entry point
+          init();
+
+        })(window);
+      </script>
+    </div>
+  </body>
+</html>
