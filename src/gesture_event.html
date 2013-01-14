@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>Internet Explorer 10: Gesture Events Sample</title>
+    <meta name="viewport" content="width=device-width">
+    <link rel="stylesheet" href="common.css">
+    <style>
+      #gesture-box {
+        width: 480px;
+        height: 270px;
+        background: #ededed;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Internet Explorer 10: Gesture Event Sample</h1>
+
+      <hr>
+
+      <div id="content">
+        <div id="demozone">
+          <h2>Demo</h2>
+          <p>Try to tap, hold, pinch, rotate, swipe and drag the box belowed.</p>
+          <div id="gesture-box"></div>
+        </div>
+        <div id="console">
+          <h2>Console</h2>
+          <ul>
+            <li>Gesture event support: <span id="gestureevent" class="value"></span></li>
+            <li>Static gesture event: <span id="gesturestatic" class="value"></span></li>
+            <li>Gesture scale: <span id="gesturescale" class="value"></span></li>
+            <li>Gesture rotation: <span id="gesturerotation" class="value"></span></li>
+            <li>Gesture translation: <span id="gesturetranslation" class="value"></span></li>
+            <li>Gesture velocity: 
+              <ul>
+                <li>X: <span id="velocityX" class="value"></span></li>
+                <li>Y: <span id="velocityY" class="value"></span></li>
+                <li>Angular: <span id="velocityAngular" class="value"></span></li>
+                <li>Expansion: <span id="velocityExpansion" class="value"></span></li>
+              </ul>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <hr>
+
+    <div id="references">
+      <h2>References</h2>
+        <ul>
+          <li><a href="http://msdn.microsoft.com/library/hh673557.aspx" target="_blank">Pointer and gesture events (MSDN)</a></li>
+          <li><a href="http://blogs.msdn.com/b/ie/archive/2012/06/20/go-beyond-pan-zoom-and-tap-using-gesture-events.aspx">Go Beyond Pan, Zoom, and Tap Using Gesture Events (IEBlog)</a></li>
+        </ul>
+      </h2>
+    </div>
+
+    <script>
+      (function(window, undefined){
+
+        var box;    // the element listened to gesture events.
+        var gesture;  // represents the MSGesture instance.
+
+        function init() {
+          /// <summary>
+          /// Entry point.
+          /// </summary>
+
+          // check if the system fires gesture events.
+          var ge = document.getElementById('gestureevent');
+          if (window.MSGesture) {
+            ge.innerText = 'Yes';
+            initGestureEventHandlers();
+          } else {
+            ge.innerText = 'No';
+          }
+        }
+
+        function initGestureEventHandlers() {
+          /// <summary>
+          /// Initialize the gesture event handlers
+          /// </summary>
+
+          // the box DOM object
+          box = document.getElementById('gesture-box');
+
+          // create the gesture object.
+          gesture = new MSGesture();
+          // set the gesture target, only the target will be fired gesture events.
+          gesture.target = box;
+
+          // add pointer as the gesture event trigger
+          // it's not necessary to fallback to mousedown event because if the system fires MSGestureXXX 
+          // events, it will fire MSPointerXXX event too.
+          box.addEventListener('MSPointerDown', function(evt) {
+            // add pointer by pointer id.
+            gesture.addPointer(evt.pointerId);
+          }, false);
+
+
+          var staticGesture = document.getElementById('gesturestatic');
+          // the Tap gesture
+          box.addEventListener('MSGestureTap', function(evt) {
+            staticGesture.innerText = "Tap";
+          }, false);
+
+          // the Hold gesture
+          box.addEventListener('MSGestureHold', function(evt) {
+
+            // use evt.detail to check the stage of the GestureHold event
+
+            if (evt.detail & evt.MSGESTURE_FLAG_BEGIN) {
+              staticGesture.innerText = 'Hold begin';
+            }
+
+            if (evt.detail & evt.MSGESTURE_FLAG_END) {
+              staticGesture.innerText = 'Hold end';
+            }
+
+            if (evt.detail & evt.MSGESTURE_FLAG_CANCEL) {
+              staticGesture.innerText = 'Hold cancel';
+            }
+
+          }, false);
+
+
+          // for dynamic gestures (e.g., pinch, rotate, swipe, and drag), you have to listen to MSGestureChange
+          // event and the get the transform information from the event object.
+          box.addEventListener('MSGestureChange', function(evt) {
+          
+            // get the original transform matrix
+            var matrix = new MSCSSMatrix(evt.target.style.transform);
+            // apply the transform from gesture
+            evt.target.style.transform = matrix.translate(evt.offsetX, evt.offsetY)
+                                               .rotate(evt.rotation * 180 / Math.PI)
+                                               .scale(evt.scale)
+                                               .translate(evt.translationX, evt.translationY)
+                                               .translate(-evt.offsetX, -evt.offsetY);
+
+            // log the transform data
+            document.getElementById('gesturescale').innerText = evt.scale.toFixed(4);
+            document.getElementById('gesturerotation').innerText = evt.rotation.toFixed(4);
+            document.getElementById('gesturetranslation').innerText = ['(', evt.translationX.toFixed(4), ', ', evt.translationY.toFixed(4), ')'].join('');
+            document.getElementById('velocityX').innerText = evt.velocityX.toFixed(4);
+            document.getElementById('velocityY').innerText = evt.velocityY.toFixed(4);
+            document.getElementById('velocityAngular').innerText = evt.velocityAngular.toFixed(4);
+            document.getElementById('velocityExpansion').innerText = evt.velocityExpansion.toFixed(4);
+          }, false);
+
+        }
+
+        // enter the entry point.
+        init();
+      
+      })(window);
+    </script>
+  </body>
+</html>
